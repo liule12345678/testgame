@@ -8,7 +8,7 @@
 
 - **类型**：回合制大战略（Grand Strategy）手机游戏
 - **核心玩法**：多势力争夺领土、资源管理、外交、回合制决策
-- **开发方式**：GitHub Actions 自动编译，**本地不部署、不测试**
+- **开发方式**：GitHub Actions 自动编译，本地不部署、不测试
 
 ## 2. 技术选型（锁定版本）
 
@@ -16,49 +16,16 @@
 |---|---|---|---|
 | 运行时 | Node.js | **26.x LTS（Lithium）** | 当前官方 LTS，CI 与工具链统一使用 |
 | 包管理 | npm | **12.x** | 随 Node 26 LTS 内置 |
-| 语言 | TypeScript | **7.x** | 当前 latest（7.0.2） |
+| 语言 | TypeScript | **7.x** | 当前 latest |
 | 引擎 | Cocos Creator | **3.8.8** | 官方最新稳定版，支持命令行构建 APK |
 | 测试 | Vitest | **5.x** | 当前 latest |
 | CI/CD | GitHub Actions | checkout v7 / setup-node v7 | 当前 latest 主版本 |
-| 包结构 | npm workspaces | — | core 与 client 共享依赖 |
 
 > 所有版本以本文档为准，依赖升级须先修改本文档再改代码，`package.json` 中用 `~` 锁定次版本。
 
-## 3. 目录结构
+## 3. 核心架构原则
 
-```
-testgame/
-├── ARCHITECTURE.md            # 本文档（项目唯一入口文档）
-├── package.json               # npm workspaces 根配置
-├── tsconfig.base.json         # 共享 TS 配置
-├── .github/
-│   └── workflows/
-│       ├── ci.yml             # PR：类型检查 + 单元测试
-│       └── build-android.yml  # push main：构建 APK → Artifact
-├── packages/
-│   ├── core/                  # ★ 纯 TS 战略核心（零引擎依赖）
-│   │   ├── src/
-│   │   │   ├── map/           # 地图：六边形格子、省份、地形
-│   │   │   ├── faction/       # 势力：资源、收入、科技树
-│   │   │   ├── unit/          # 部队：编制、移动、战斗
-│   │   │   ├── ai/            # 势力 AI：评估、决策、行动
-│   │   │   ├── economy/       # 经济：税收、建设、贸易
-│   │   │   ├── diplomacy/     # 外交：宣战、结盟、条约
-│   │   │   ├── turn/          # 回合调度器（核心状态机）
-│   │   │   ├── events/        # 随机/脚本事件系统
-│   │   │   └── rng/           # 种子随机数（保证回放一致性）
-│   │   └── tests/             # vitest 单元测试（CI 必须全绿）
-│   └── client/                # Cocos Creator 3.8.8 工程
-│       └── assets/
-│           ├── scenes/        # 主菜单 / 战略地图 / 战斗 / 内政
-│           ├── scripts/       # 视图层脚本，只调用 @game/core
-│           └── resources/     # 美术、音频、配置表
-└── docs/                      # 设计文档、数值策划案
-```
-
-## 4. 核心架构原则
-
-### 4.1 逻辑与渲染严格分离
+### 3.1 逻辑与渲染严格分离
 
 ```
 ┌─────────────────────────────────────┐
@@ -77,26 +44,26 @@ testgame/
 
 **规则：**
 
-1. `core` 不 import 任何 `cc`（引擎）模块，CI 用脚本强制检查
+1. 战略核心不依赖引擎模块，可独立于引擎编译与测试
 2. 一切状态变更通过 **Command（命令）** 进行：`moveUnit`、`declareWar`、`endTurn`…可校验、可回放、可存档
 3. 视图层只读取 GameState 快照 + 订阅事件，不直接改数据
 4. `GameState` 必须可完整 JSON 序列化 → 存档 = 一次 `JSON.stringify`
 
-### 4.2 回合制主循环（TurnScheduler）
+### 3.2 回合制主循环（TurnScheduler）
 
 ```
 玩家回合（下命令）
    ↓
 endTurn() → 结算玩家收入/建设
    ↓
-依次执行每个 AI 势力（ai/ 评估 → 生成命令 → 执行）
+依次执行每个 AI 势力（评估 → 生成命令 → 执行）
    ↓
 全局结算（人口增长、事件触发、外交冷却）
    ↓
 回合数 +1 → 交还玩家
 ```
 
-### 4.3 势力 AI 分层
+### 3.3 势力 AI 分层
 
 | 层 | 职责 |
 |---|---|
@@ -105,15 +72,15 @@ endTurn() → 结算玩家收入/建设
 | 战术层 Tactics | 具体命令：部队调派、攻击目标选择 |
 | 外交层 Diplomacy | 评估关系值，决定结盟/宣战/贸易 |
 
-AI 全部在 `core/ai/` 中实现，确定性优先（种子随机），保证测试可复现。
+AI 实现确定性优先（种子随机），保证测试可复现。
 
-### 4.4 地图设计
+### 3.4 地图设计
 
 - **六边形网格（Hex Grid）**，轴坐标系（axial coordinates）
 - 地图上层结构：`世界 → 区域(Region) → 省份(Province) → 格子(Tile)`
 - 大战略以**省份为最小策略单位**，格子仅用于部队移动与战斗
 
-## 5. 数据流示例（一次攻击）
+## 4. 数据流示例（一次攻击）
 
 ```
 玩家点击敌省 → client 发送 AttackCommand
@@ -123,26 +90,22 @@ AI 全部在 `core/ai/` 中实现，确定性优先（种子随机），保证�
   → client 监听事件 → 播放战斗动画/更新地图颜色
 ```
 
-## 6. CI/CD 流水线（GitHub Actions）
+## 5. CI/CD 流水线（GitHub Actions）
 
 ### ci.yml（每次 PR / push）
 
-1. `npm ci` 安装依赖
-2. `tsc --noEmit` 类型检查（core + client 脚本）
-3. `vitest run` 跑 core 单元测试
-4. 检查 `core` 未引入引擎依赖
-5. 全绿才允许合并
+1. 安装依赖 → 类型检查 → 单元测试 → 检查核心层无引擎依赖
+2. 全绿才允许合并
 
 ### build-android.yml（push 到 main）
 
-1. 使用 Cocos Creator 3.8.8 命令行构建
-2. 构建 Android APK（Gradle + Android SDK）
-3. 上传 APK 到 Actions Artifact，手机直接下载安装
-4. 打 tag 时自动创建 GitHub Release
+1. 使用 Cocos Creator 3.8.8 命令行构建 Android APK
+2. 上传 APK 到 Actions Artifact，手机直接下载安装
+3. 打 tag 时自动创建 GitHub Release
 
-> **本地无需安装任何引擎/SDK** —— 全部构建发生在 GitHub 云端。
+> 本地无需安装任何引擎/SDK —— 全部构建发生在 GitHub 云端。
 
-## 7. 里程碑路线图
+## 6. 里程碑路线图
 
 | 阶段 | 内容 | 验收标准 |
 |---|---|---|
@@ -154,10 +117,10 @@ AI 全部在 `core/ai/` 中实现，确定性优先（种子随机），保证�
 | M5 | 外交 + 事件 | 结盟、贸易、随机事件 |
 | M6 | 平衡与打磨 | 数值调整、教程、存档/读档 |
 
-## 8. 开发约定
+## 7. 开发约定
 
 - 每个功能一个分支 + PR，PR 描述写明改动了哪个模块
-- `core` 内每个系统必须有对应 `tests/*.test.ts`，先写测试再实现
-- 数值配置（税率、兵种属性）放 `packages/client/assets/resources/data/*.json`，代码不改死值
-- 所有随机数使用种子随机（`core/rng`），保证回放与测试一致
-- 版本变更：先改本文档第 2 节 → 再改 `package.json` → PR 说明原因
+- 战略核心每个系统必须有对应单元测试，先写测试再实现
+- 数值配置（税率、兵种属性）用数据文件驱动，代码不改死值
+- 所有随机数使用种子随机，保证回放与测试一致
+- 版本变更：先改本文档第 2 节 → 再改依赖配置 → PR 说明原因

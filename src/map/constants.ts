@@ -1,0 +1,12 @@
+export const MAP_WIDTH = 512
+export const MAP_HEIGHT = 512
+export const CHUNK_SIZE = 4
+export const SEA_LEVEL = 0.42
+export const RIVER_SOURCE_COUNT = 32
+export const RIVER_MAX_STEPS = 2048
+export const NOISE_OCTAVES = 4
+export const NOISE_BASE_FREQUENCY = 0.012
+export const NOISE_PERSISTENCE = 0.5
+export const MIN_ZOOM = 0.15
+export const MAX_ZOOM = 8
+export const DEFAULT_SEED_LIMIT = 4294967295

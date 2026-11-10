@@ -1,6 +1,6 @@
 # 大战略手机游戏 — 架构设计文档
 
-> 引擎：Cocos Creator 3.8.x · 语言：TypeScript · 平台：Android（后续可扩展 iOS/Web）
+> 引擎：Cocos Creator 3.8.8 · 语言：TypeScript 7.0 · 运行时：Node.js 26 LTS · 平台：Android（后续可扩展 iOS/Web）
 
 ---
 
@@ -8,25 +8,27 @@
 
 - **类型**：回合制大战略（Grand Strategy）手机游戏
 - **核心玩法**：多势力争夺领土、资源管理、外交、回合制决策
-- **开发方式**：AI 驱动开发，GitHub Actions 自动编译，**本地不部署、不测试**
+- **开发方式**：GitHub Actions 自动编译，**本地不部署、不测试**
 
-## 2. 技术选型
+## 2. 技术选型（锁定版本）
 
-| 层 | 技术 | 说明 |
-|---|---|---|
-| 引擎 | Cocos Creator 3.8.x | 官方支持命令行构建 APK，适配 CI |
-| 语言 | TypeScript（全栈） | AI 生成代码最可靠的语言 |
-| 核心逻辑 | 纯 TS 独立包（零引擎依赖） | 可用 vitest 在 CI 中直接单测 |
-| UI/渲染 | Cocos Creator 场景系统 | 仅做展示层 |
-| 存档 | JSON 序列化 + 本地存储 | 回合制天然适合存档 |
-| CI/CD | GitHub Actions | PR 跑测试 + 推送构建 APK Artifact |
-| 包管理 | npm workspaces | core 与客户端共享依赖 |
+| 层 | 技术 | 版本 | 锁定依据 |
+|---|---|---|---|
+| 运行时 | Node.js | **26.x LTS（Lithium）** | 当前官方 LTS，CI 与工具链统一使用 |
+| 包管理 | npm | **12.x** | 随 Node 26 LTS 内置 |
+| 语言 | TypeScript | **7.x** | 当前 latest（7.0.2） |
+| 引擎 | Cocos Creator | **3.8.8** | 官方最新稳定版，支持命令行构建 APK |
+| 测试 | Vitest | **5.x** | 当前 latest |
+| CI/CD | GitHub Actions | checkout v7 / setup-node v7 | 当前 latest 主版本 |
+| 包结构 | npm workspaces | — | core 与 client 共享依赖 |
+
+> 所有版本以本文档为准，依赖升级须先修改本文档再改代码，`package.json` 中用 `~` 锁定次版本。
 
 ## 3. 目录结构
 
 ```
 testgame/
-├── ARCHITECTURE.md            # 本文档
+├── ARCHITECTURE.md            # 本文档（项目唯一入口文档）
 ├── package.json               # npm workspaces 根配置
 ├── tsconfig.base.json         # 共享 TS 配置
 ├── .github/
@@ -34,7 +36,7 @@ testgame/
 │       ├── ci.yml             # PR：类型检查 + 单元测试
 │       └── build-android.yml  # push main：构建 APK → Artifact
 ├── packages/
-│   ├── core/                  # ★ 纯 TS 战略核心（无引擎依赖）
+│   ├── core/                  # ★ 纯 TS 战略核心（零引擎依赖）
 │   │   ├── src/
 │   │   │   ├── map/           # 地图：六边形格子、省份、地形
 │   │   │   ├── faction/       # 势力：资源、收入、科技树
@@ -43,9 +45,10 @@ testgame/
 │   │   │   ├── economy/       # 经济：税收、建设、贸易
 │   │   │   ├── diplomacy/     # 外交：宣战、结盟、条约
 │   │   │   ├── turn/          # 回合调度器（核心状态机）
-│   │   │   └── events/        # 随机/脚本事件系统
+│   │   │   ├── events/        # 随机/脚本事件系统
+│   │   │   └── rng/           # 种子随机数（保证回放一致性）
 │   │   └── tests/             # vitest 单元测试（CI 必须全绿）
-│   └── client/                # Cocos Creator 工程（assets/ 内）
+│   └── client/                # Cocos Creator 3.8.8 工程
 │       └── assets/
 │           ├── scenes/        # 主菜单 / 战略地图 / 战斗 / 内政
 │           ├── scripts/       # 视图层脚本，只调用 @game/core
@@ -55,7 +58,7 @@ testgame/
 
 ## 4. 核心架构原则
 
-### 4.1 逻辑与渲染严格分离（最重要）
+### 4.1 逻辑与渲染严格分离
 
 ```
 ┌─────────────────────────────────────┐
@@ -102,7 +105,7 @@ endTurn() → 结算玩家收入/建设
 | 战术层 Tactics | 具体命令：部队调派、攻击目标选择 |
 | 外交层 Diplomacy | 评估关系值，决定结盟/宣战/贸易 |
 
-AI 全部在 `core/ai/` 中实现，确定性优先（种子随机），便于 CI 测试复现。
+AI 全部在 `core/ai/` 中实现，确定性优先（种子随机），保证测试可复现。
 
 ### 4.4 地图设计
 
@@ -132,10 +135,10 @@ AI 全部在 `core/ai/` 中实现，确定性优先（种子随机），便于 C
 
 ### build-android.yml（push 到 main）
 
-1. 使用 Cocos Creator 官方 Docker 镜像执行命令行构建
-2. 构建 Android APK（Gradle + Android SDK 容器）
+1. 使用 Cocos Creator 3.8.8 命令行构建
+2. 构建 Android APK（Gradle + Android SDK）
 3. 上传 APK 到 Actions Artifact，手机直接下载安装
-4. 可选：打 tag 时自动创建 GitHub Release
+4. 打 tag 时自动创建 GitHub Release
 
 > **本地无需安装任何引擎/SDK** —— 全部构建发生在 GitHub 云端。
 
@@ -151,9 +154,10 @@ AI 全部在 `core/ai/` 中实现，确定性优先（种子随机），便于 C
 | M5 | 外交 + 事件 | 结盟、贸易、随机事件 |
 | M6 | 平衡与打磨 | 数值调整、教程、存档/读档 |
 
-## 8. 开发约定（面向 AI 协作）
+## 8. 开发约定
 
 - 每个功能一个分支 + PR，PR 描述写明改动了哪个模块
 - `core` 内每个系统必须有对应 `tests/*.test.ts`，先写测试再实现
 - 数值配置（税率、兵种属性）放 `packages/client/assets/resources/data/*.json`，代码不改死值
 - 所有随机数使用种子随机（`core/rng`），保证回放与测试一致
+- 版本变更：先改本文档第 2 节 → 再改 `package.json` → PR 说明原因

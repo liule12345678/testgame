@@ -11,7 +11,7 @@ export const SCENE_TITLE = '地图'
 export type ScenePhase = 'size_select' | 'generating' | 'map'
 
 export interface SceneContext {
-  register_scene(key: string, factory: () => MapScene): void
+  register_scene(key: string, factory: () => MapSceneHandle): void
   emit(event: string, payload: unknown): void
   on(event: string, handler: (payload: unknown) => void): void
 }

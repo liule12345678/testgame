@@ -1,0 +1,65 @@
+import java.util.Base64
+
+def keystore_base64 = System.getenv("KEYSTORE_BASE64")
+def keystore_password = System.getenv("KEYSTORE_PASSWORD")
+def key_alias = System.getenv("KEY_ALIAS")
+def key_password = System.getenv("KEY_PASSWORD")
+def has_release_key = keystore_base64 != null && keystore_password != null && key_alias != null && key_password != null
+
+def keystore_dir = file("${rootProject.projectDir}/keystore")
+def keystore_file = file("${keystore_dir}/release.jks")
+
+if (has_release_key && !keystore_file.exists()) {
+    keystore_dir.mkdirs()
+    keystore_file.withOutputStream { stream ->
+        stream.write(Base64.decoder.decode(keystore_base64))
+    }
+}
+
+ext {
+    release_signing_ready = has_release_key
+    release_keystore_file = keystore_file
+    release_keystore_password = keystore_password ?: ""
+    release_key_alias = key_alias ?: ""
+    release_key_password = key_password ?: ""
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+subprojects { sub_project ->
+    sub_project.plugins.withId("com.android.application") {
+        def android_ext = sub_project.extensions.getByName("android")
+        android_ext.signingConfigs.create("release") {
+            storeFile keystore_file
+            storePassword rootProject.ext.release_keystore_password
+            keyAlias rootProject.ext.release_key_alias
+            keyPassword rootProject.ext.release_key_password
+        }
+        android_ext.signingConfigs.create("fallback") {
+            storeFile file("${System.getProperty("user.home")}/.android/debug.keystore")
+            storePassword "android"
+            keyAlias "androiddebugkey"
+            keyPassword "android"
+        }
+        def release_config_name = rootProject.ext.release_signing_ready ? "release" : "fallback"
+        android_ext.buildTypes.getByName("release").signingConfig = android_ext.signingConfigs.getByName(release_config_name)
+    }
+}
+
+tasks.register("assembleRelease") {
+    dependsOn(subprojects.collect { sub_project -> "${sub_project.path}:assembleRelease" })
+    doLast {
+        copy {
+            from(subprojects.collect { sub_project -> file("${sub_project.projectDir}/build/outputs/apk") })
+            into(file("${rootProject.projectDir}/../../build/android"))
+            include("**/*.apk")
+            eachFile { file_copy_details -> file_copy_details.path = file_copy_details.name }
+            includeEmptyDirs = false
+        }
+    }
+}

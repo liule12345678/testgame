@@ -1,11 +1,11 @@
-export const SETTING_SOUND_VOLUME = "sound_volume"
-export const SETTING_BRIGHTNESS = "brightness"
-export const SETTING_LANGUAGE = "language"
-
-export const SOUND_VOLUME_MIN = 0
-export const SOUND_VOLUME_MAX = 100
-export const BRIGHTNESS_MIN = 0
-export const BRIGHTNESS_MAX = 100
-
-export const LANGUAGE_LIST = ["zh"]
-export const LANGUAGE_LABELS: Record<string, string> = { zh: "中文" }
+export {
+  SETTING_SOUND_VOLUME,
+  SETTING_BRIGHTNESS,
+  SETTING_LANGUAGE,
+  SOUND_VOLUME_MIN,
+  SOUND_VOLUME_MAX,
+  BRIGHTNESS_MIN,
+  BRIGHTNESS_MAX,
+  LANGUAGE_LIST,
+  LANGUAGE_LABELS,
+} from "../core/settings_options"

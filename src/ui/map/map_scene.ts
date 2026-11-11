@@ -1,9 +1,11 @@
-import { MapData, generate_terrain } from '../../map'
+import { MapData, generate_terrain, terrain_params, default_terrain_params } from '../../map'
+import { save_game, load_game } from '../../core/save_store'
+import { save_record, save_input, SCENE_MAP_GENERATOR } from '../../core/contract'
 import { SizeSelectView, ViewSize } from './size_select_view'
 import { ProgressView } from './progress_view'
 import { MapView, HexRenderer } from './map_view'
 
-export const SCENE_KEY = 'map'
+export const SCENE_KEY = SCENE_MAP_GENERATOR
 export const SCENE_TITLE = '地图'
 
 export type ScenePhase = 'size_select' | 'generating' | 'map'
@@ -20,9 +22,12 @@ export interface MapSceneHandle {
   get_progress(): ProgressView
   get_map_view(): MapView | null
   get_map_data(): MapData | null
+  get_current_save(): save_record | null
   get_title(): string
   confirm_size(): void
   advance_generation(): boolean
+  save_current(name: string): save_record | null
+  load_save(id: string): boolean
   pan(dx: number, dy: number): void
   zoom(factor: number, anchor_x: number, anchor_y: number): void
   render(renderer: HexRenderer, view_width: number, view_height: number): number
@@ -36,6 +41,8 @@ export class MapScene implements MapSceneHandle {
   private progress = new ProgressView()
   private map_view: MapView | null = null
   private map_data: MapData | null = null
+  private current_save: save_record | null = null
+  private terrain_params: terrain_params = default_terrain_params()
   private generator: Generator<number, MapData, unknown> | null = null
   private exit_handlers: Array<() => void> = []
 
@@ -59,6 +66,10 @@ export class MapScene implements MapSceneHandle {
     return this.map_data
   }
 
+  get_current_save(): save_record | null {
+    return this.current_save
+  }
+
   get_title(): string {
     return SCENE_TITLE
   }
@@ -68,7 +79,8 @@ export class MapScene implements MapSceneHandle {
       return
     }
     const size: ViewSize = this.size_select.confirm()
-    this.generator = generate_terrain(size.width, size.height, Date.now() % 2147483647)
+    this.terrain_params = default_terrain_params()
+    this.generator = generate_terrain(size.width, size.height, Date.now() % 2147483647, this.terrain_params)
     this.phase = 'generating'
     this.progress.update(0)
   }
@@ -87,6 +99,39 @@ export class MapScene implements MapSceneHandle {
     }
     this.progress.update(step.value)
     return false
+  }
+
+  save_current(name: string): save_record | null {
+    if (this.map_data === null) {
+      return null
+    }
+    const input: save_input = {
+      name,
+      width: this.map_data.width,
+      height: this.map_data.height,
+      seed: this.map_data.seed,
+      terrain: { ...this.terrain_params }
+    }
+    if (this.current_save !== null) {
+      input.id = this.current_save.id
+    }
+    this.current_save = save_game(input)
+    return this.current_save
+  }
+
+  load_save(id: string): boolean {
+    const record = load_game(id)
+    if (record === null) {
+      return false
+    }
+    this.current_save = record
+    this.terrain_params = { ...record.terrain }
+    this.map_data = null
+    this.map_view = null
+    this.generator = generate_terrain(record.width, record.height, record.seed, this.terrain_params)
+    this.phase = 'generating'
+    this.progress.update(0)
+    return true
   }
 
   pan(dx: number, dy: number): void {

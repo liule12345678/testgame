@@ -19,18 +19,50 @@ import {
 import { axial_neighbors } from './hex_grid'
 import { create_rng } from './rng'
 
+export interface terrain_params {
+  sea_level: number
+  river_source_count: number
+  river_max_steps: number
+  noise_octaves: number
+  noise_base_frequency: number
+  noise_persistence: number
+}
+
+export function default_terrain_params(): terrain_params {
+  return {
+    sea_level: SEA_LEVEL,
+    river_source_count: RIVER_SOURCE_COUNT,
+    river_max_steps: RIVER_MAX_STEPS,
+    noise_octaves: NOISE_OCTAVES,
+    noise_base_frequency: NOISE_BASE_FREQUENCY,
+    noise_persistence: NOISE_PERSISTENCE
+  }
+}
+
 export const PROGRESS_HEIGHTMAP_END = 55
 export const PROGRESS_CLASSIFY_END = 75
 export const PROGRESS_RIVER_END = 95
 export const PROGRESS_DONE = 100
 
-export function build_heightmap(width: number, height: number, seed: number): Float32Array {
+export function build_heightmap(
+  width: number,
+  height: number,
+  seed: number,
+  params: terrain_params = default_terrain_params()
+): Float32Array {
   const heights = new Float32Array(width * height)
   let min = Number.POSITIVE_INFINITY
   let max = Number.NEGATIVE_INFINITY
   for (let r = 0; r < height; r++) {
     for (let q = 0; q < width; q++) {
-      const value = fractal_noise(q, r, seed, NOISE_OCTAVES, NOISE_BASE_FREQUENCY, NOISE_PERSISTENCE)
+      const value = fractal_noise(
+        q,
+        r,
+        seed,
+        params.noise_octaves,
+        params.noise_base_frequency,
+        params.noise_persistence
+      )
       heights[r * width + q] = value
       if (value < min) {
         min = value
@@ -47,23 +79,25 @@ export function build_heightmap(width: number, height: number, seed: number): Fl
   return heights
 }
 
-export function classify_terrain(heights: Float32Array): Uint8Array {
+export function classify_terrain(
+  heights: Float32Array,
+  sea_level: number = SEA_LEVEL
+): Uint8Array {
   const terrains = new Uint8Array(heights.length)
   for (let i = 0; i < heights.length; i++) {
-    terrains[i] = heights[i] < SEA_LEVEL ? TERRAIN_CODE_OCEAN : TERRAIN_CODE_PLAIN
+    terrains[i] = heights[i] < sea_level ? TERRAIN_CODE_OCEAN : TERRAIN_CODE_PLAIN
   }
   return terrains
 }
 
 export function carve_rivers(
   map: MapData,
-  source_count: number = RIVER_SOURCE_COUNT,
-  max_steps: number = RIVER_MAX_STEPS
+  params: terrain_params = default_terrain_params()
 ): void {
   const rng = create_rng(map.seed ^ 0x5f356495)
   let placed = 0
   let attempts = 0
-  while (placed < source_count && attempts < source_count * 8) {
+  while (placed < params.river_source_count && attempts < params.river_source_count * 8) {
     attempts++
     const q = Math.floor(rng() * map.width)
     const r = Math.floor(rng() * map.height)
@@ -71,10 +105,10 @@ export function carve_rivers(
     if (map.terrains[index] !== TERRAIN_CODE_PLAIN) {
       continue
     }
-    if (map.heights[index] < SEA_LEVEL + 0.12) {
+    if (map.heights[index] < params.sea_level + 0.12) {
       continue
     }
-    walk_river(map, q, r, max_steps)
+    walk_river(map, q, r, params.river_max_steps)
     placed++
   }
 }
@@ -116,31 +150,47 @@ function lowest_neighbor(map: MapData, q: number, r: number): { q: number; r: nu
 export function generate_terrain(
   width: number,
   height: number,
-  seed: number
+  seed: number,
+  params: terrain_params = default_terrain_params()
 ): Generator<number, MapData, unknown> {
-  return run_generation(width, height, seed)
+  return run_generation(width, height, seed, params)
 }
 
-function* run_generation(width: number, height: number, seed: number): Generator<number, MapData, unknown> {
+function* run_generation(
+  width: number,
+  height: number,
+  seed: number,
+  params: terrain_params
+): Generator<number, MapData, unknown> {
   const map = create_map_data(width, height, seed)
-  const heights = yield* build_heightmap_progressive(map)
+  const heights = yield* build_heightmap_progressive(map, params)
   map.heights.set(heights)
-  const terrains = classify_terrain(map.heights)
+  const terrains = classify_terrain(map.heights, params.sea_level)
   map.terrains.set(terrains)
   yield PROGRESS_CLASSIFY_END
-  carve_rivers(map)
+  carve_rivers(map, params)
   yield PROGRESS_RIVER_END
   yield PROGRESS_DONE
   return map
 }
 
-function* build_heightmap_progressive(map: MapData): Generator<number, Float32Array, unknown> {
+function* build_heightmap_progressive(
+  map: MapData,
+  params: terrain_params
+): Generator<number, Float32Array, unknown> {
   const heights = new Float32Array(map.width * map.height)
   let min = Number.POSITIVE_INFINITY
   let max = Number.NEGATIVE_INFINITY
   for (let r = 0; r < map.height; r++) {
     for (let q = 0; q < map.width; q++) {
-      const value = fractal_noise(q, r, map.seed, NOISE_OCTAVES, NOISE_BASE_FREQUENCY, NOISE_PERSISTENCE)
+      const value = fractal_noise(
+        q,
+        r,
+        map.seed,
+        params.noise_octaves,
+        params.noise_base_frequency,
+        params.noise_persistence
+      )
       heights[r * map.width + q] = value
       if (value < min) {
         min = value

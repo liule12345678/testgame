@@ -19,3 +19,4 @@ export {
   create_scene,
   register_map_scene
 } from './map_scene'
+export { map_module } from './map_module'

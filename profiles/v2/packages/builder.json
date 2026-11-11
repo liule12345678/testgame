@@ -1,0 +1,7 @@
+{
+  "__version__": "1.0.0",
+  "data": {
+    "buildPlatform": "android",
+    "buildPath": "project://build"
+  }
+}

@@ -31,6 +31,8 @@ export {
   build_heightmap,
   classify_terrain,
   carve_rivers,
+  terrain_params,
+  default_terrain_params,
   PROGRESS_HEIGHTMAP_END,
   PROGRESS_CLASSIFY_END,
   PROGRESS_RIVER_END,

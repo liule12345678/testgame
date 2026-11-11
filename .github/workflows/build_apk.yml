@@ -5,6 +5,16 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      version:
+        description: 版本号 如 v0.1.0
+        required: true
+        type: string
+      publish:
+        description: 是否发布 Release
+        required: false
+        default: false
+        type: boolean
 
 env:
   COCOS_VERSION: 3.8.8
@@ -17,7 +27,6 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 26
-          cache: npm
       - run: npm install
       - run: npm test
 
@@ -25,6 +34,7 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     env:
+      VERSION: ${{ inputs.version || github.ref_name }}
       KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
       KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
       KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
@@ -61,6 +71,15 @@ jobs:
           gradle -p build/android/proj assembleRelease
           mkdir -p build/android
           find build/android/proj -name "*.apk" -exec cp {} build/android/ \;
+          index=0
+          for f in build/android/*.apk; do
+            if [ "$index" -eq 0 ]; then
+              mv "$f" "build/android/testgame-${VERSION}.apk"
+            else
+              mv "$f" "build/android/testgame-${VERSION}-${index}.apk"
+            fi
+            index=$((index + 1))
+          done
       - uses: actions/upload-artifact@v4
         with:
           name: apk
@@ -69,7 +88,7 @@ jobs:
 
   release:
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish)
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -80,4 +99,6 @@ jobs:
           path: build/android
       - uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ inputs.version || github.ref_name }}
+          name: ${{ inputs.version || github.ref_name }}
           files: build/android/*.apk

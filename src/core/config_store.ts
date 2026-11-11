@@ -1,11 +1,10 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs"
-import { resolve } from "node:path"
+import { storage_exists, storage_read, storage_write } from "./storage_backend"
 
-const CONFIG_FILE = resolve(process.cwd(), "config.yaml")
+const CONFIG_KEY = "config.yaml"
 
 export function read_config(): Record<string, string> {
-  if (!existsSync(CONFIG_FILE)) return {}
-  const lines = readFileSync(CONFIG_FILE, "utf-8").split("\n")
+  if (!storage_exists(CONFIG_KEY)) return {}
+  const lines = storage_read(CONFIG_KEY).split("\n")
   const result: Record<string, string> = {}
   for (const line of lines) {
     const trimmed = line.trim()
@@ -21,5 +20,5 @@ export function read_config(): Record<string, string> {
 
 export function write_config(data: Record<string, string>): void {
   const lines = Object.entries(data).map(([key, value]) => `${key}: ${value}`)
-  writeFileSync(CONFIG_FILE, `${lines.join("\n")}\n`, "utf-8")
+  storage_write(CONFIG_KEY, `${lines.join("\n")}\n`)
 }

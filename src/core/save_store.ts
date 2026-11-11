@@ -1,5 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs"
-import { resolve } from "node:path"
+import { storage_exists, storage_read, storage_write } from "./storage_backend"
 import { emit } from "./event_bus"
 import {
   EVENT_SAVE_DELETED,
@@ -9,12 +8,12 @@ import {
   save_store_contract
 } from "./contract"
 
-const SAVE_FILE = resolve(process.cwd(), "saves.json")
+const SAVE_KEY = "saves.json"
 
 function read_all(): save_record[] {
-  if (!existsSync(SAVE_FILE)) return []
+  if (!storage_exists(SAVE_KEY)) return []
   try {
-    const raw = JSON.parse(readFileSync(SAVE_FILE, "utf-8"))
+    const raw = JSON.parse(storage_read(SAVE_KEY))
     return Array.isArray(raw) ? raw : []
   } catch {
     return []
@@ -22,7 +21,7 @@ function read_all(): save_record[] {
 }
 
 function write_all(records: save_record[]): void {
-  writeFileSync(SAVE_FILE, JSON.stringify(records, null, 2), "utf-8")
+  storage_write(SAVE_KEY, JSON.stringify(records, null, 2))
 }
 
 function make_id(): string {

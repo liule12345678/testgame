@@ -1,22 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { register_storage_backend } from './storage_backend'
 
-const fs_state = vi.hoisted(() => {
-  const files = new Map<string, string>()
-  return {
-    files,
-    exists_sync: (path: string) => files.has(path),
-    read_file: (path: string) => files.get(path) ?? '',
-    write_file: (path: string, data: string) => {
-      files.set(path, data)
-    }
+const fs_state = {
+  files: new Map<string, string>(),
+  exists_sync: (key: string) => fs_state.files.has(key),
+  read_file: (key: string) => fs_state.files.get(key) ?? '',
+  write_file: (key: string, data: string) => {
+    fs_state.files.set(key, data)
   }
-})
+}
 
-vi.mock('node:fs', () => ({
-  existsSync: fs_state.exists_sync,
-  readFileSync: fs_state.read_file,
-  writeFileSync: fs_state.write_file
-}))
+register_storage_backend({
+  exists: fs_state.exists_sync,
+  read: fs_state.read_file,
+  write: fs_state.write_file
+})
 
 import { save_game, load_game, list_saves, delete_save } from './save_store'
 import { clear_events, on } from './event_bus'

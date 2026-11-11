@@ -8,4 +8,4 @@ export {
   BRIGHTNESS_MAX,
   LANGUAGE_LIST,
   LANGUAGE_LABELS,
-} from "../core/settings_options"
+} from "../../core/settings_options"

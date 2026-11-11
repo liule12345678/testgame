@@ -22,6 +22,13 @@ export { on, emit, clear_events } from "./event_bus"
 export { register_scene, has_scene, list_scenes, create_scene, open_scene } from "./scene_registry"
 export { load_settings, get, set, get_all } from "./settings_service"
 export {
+  register_storage_backend,
+  storage_exists,
+  storage_read,
+  storage_write
+} from "./storage_backend"
+export type { storage_backend } from "./storage_backend"
+export {
   SETTING_SOUND_VOLUME,
   SETTING_BRIGHTNESS,
   SETTING_LANGUAGE,

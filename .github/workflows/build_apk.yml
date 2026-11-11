@@ -56,6 +56,7 @@ jobs:
           perl -pi -e 's#"\.\./\.\./src/#"./lib/#g' assets/scripts/bootstrap_bridge.ts
           cp -r src assets/scripts/lib
           find assets/scripts/lib -name "*.test.ts" -delete
+          rm -rf assets/scripts/lib/platform
       - name: 缓存 Cocos Creator
         uses: actions/cache@v4
         with:

@@ -32,7 +32,7 @@ jobs:
 
   build:
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     env:
       VERSION: ${{ inputs.version || github.ref_name }}
       KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -46,29 +46,62 @@ jobs:
           node-version: 26
       - name: 跨目录导入消解
         run: |
-          sed -i 's#"\.\./\.\./src/#"./lib/#g' assets/scripts/bootstrap_bridge.ts
+          perl -pi -e 's#"\.\./\.\./src/#"./lib/#g' assets/scripts/bootstrap_bridge.ts
           cp -r src assets/scripts/lib
           find assets/scripts/lib -name "*.test.ts" -delete
+      - name: 准备 JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: 17
+      - name: 准备 Android SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          android_sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-$HOME/Library/Android/sdk}}"
+          sdkmanager="$android_sdk_root/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$sdkmanager" --licenses >/dev/null
+          "$sdkmanager" "platform-tools" "platforms;android-34" "build-tools;34.0.0" "cmake;3.22.1" "ndk;23.1.7779620"
+          echo "ANDROID_SDK_ROOT=$android_sdk_root" >> "$GITHUB_ENV"
+          echo "ANDROID_HOME=$android_sdk_root" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_HOME=$android_sdk_root/ndk/23.1.7779620" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=$android_sdk_root/ndk/23.1.7779620" >> "$GITHUB_ENV"
       - name: 安装 Cocos Creator
         env:
           CREATOR_LICENSE: ${{ secrets.CREATOR_LICENSE }}
           CREATOR_DOWNLOAD_URL: ${{ secrets.CREATOR_DOWNLOAD_URL }}
         run: |
-          url="${CREATOR_DOWNLOAD_URL:-https://download.cocos.com/CocosCreator/v${COCOS_VERSION}/CocosCreator-v${COCOS_VERSION}-linux-x86_64.tar}"
-          curl -fsSL -o creator.tar "$url"
+          set -euo pipefail
+          url="${CREATOR_DOWNLOAD_URL:-https://download.cocos.com/CocosCreator/v${COCOS_VERSION}/CocosCreator-v${COCOS_VERSION}-mac-121518.zip}"
+          installer="$HOME/Library/Caches/cocos-creator/CocosCreator-v${COCOS_VERSION}-mac-121518.zip"
+          mkdir -p "$(dirname "$installer")"
+          curl -fsSL --retry 3 --retry-delay 10 -o "$installer" "$url"
+          extract_dir="$RUNNER_TEMP/cocos-creator-${COCOS_VERSION}"
+          rm -rf "$extract_dir"
+          mkdir -p "$extract_dir"
+          ditto -x -k "$installer" "$extract_dir"
+          creator_app="$(find "$extract_dir" -name CocosCreator.app -type d -print -quit)"
+          rm -rf "$HOME/cocos_creator"
           mkdir -p "$HOME/cocos_creator"
-          tar -xf creator.tar -C "$HOME/cocos_creator"
-          chmod +x "$HOME/cocos_creator/CocosCreator"
+          ditto "$creator_app" "$HOME/cocos_creator/CocosCreator.app"
+          xattr -dr com.apple.quarantine "$HOME/cocos_creator/CocosCreator.app" || true
+          cli="$HOME/cocos_creator/CocosCreator.app/Contents/MacOS/CocosCreator"
+          test -x "$cli"
+          echo "COCOS_CLI=$cli" >> "$GITHUB_ENV"
           if [ -n "$CREATOR_LICENSE" ]; then
-            mkdir -p "$HOME/.CocosCreator/licenses"
-            echo "$CREATOR_LICENSE" | base64 -d > "$HOME/.CocosCreator/licenses/license.json"
+            mkdir -p "$HOME/Library/Application Support/CocosCreator/licenses"
+            echo "$CREATOR_LICENSE" | base64 -d > "$HOME/Library/Application Support/CocosCreator/licenses/license.json"
           fi
       - name: 构建 Android 平台
         run: |
-          "$HOME/cocos_creator/CocosCreator" --project "$GITHUB_WORKSPACE" --build "platform=android;debug=false"
+          "$COCOS_CLI" --project "$GITHUB_WORKSPACE" --build "platform=android;debug=false"
       - name: Gradle 打包 APK
         run: |
-          gradle -p build/android/proj assembleRelease
+          if [ -x build/android/proj/gradlew ]; then
+            (cd build/android/proj && ./gradlew assembleRelease)
+          else
+            gradle -p build/android/proj assembleRelease
+          fi
           mkdir -p build/android
           find build/android/proj -name "*.apk" -exec cp {} build/android/ \;
           index=0

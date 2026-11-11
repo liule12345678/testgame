@@ -2,6 +2,8 @@ name: build_apk
 
 on:
   push:
+    branches:
+      - main
     tags:
       - "v*"
   workflow_dispatch:
@@ -19,6 +21,10 @@ on:
 env:
   COCOS_VERSION: 3.8.8
 
+concurrency:
+  group: build_apk-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -32,6 +38,7 @@ jobs:
 
   build:
     needs: test
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: macos-latest
     env:
       VERSION: ${{ inputs.version || github.ref_name }}
@@ -49,6 +56,21 @@ jobs:
           perl -pi -e 's#"\.\./\.\./src/#"./lib/#g' assets/scripts/bootstrap_bridge.ts
           cp -r src assets/scripts/lib
           find assets/scripts/lib -name "*.test.ts" -delete
+      - name: 缓存 Cocos Creator
+        uses: actions/cache@v4
+        with:
+          path: ~/cocos_creator
+          key: cocos-creator-${{ env.COCOS_VERSION }}-mac-121518
+      - name: 缓存 Android SDK
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Android/sdk
+          key: android-sdk-34-ndk23-cmake322
+      - name: 缓存 Gradle
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle
+          key: gradle-${{ hashFiles('**/*.gradle') }}
       - name: 准备 JDK
         uses: actions/setup-java@v5
         with:
@@ -78,6 +100,15 @@ jobs:
           CREATOR_DOWNLOAD_URL: ${{ secrets.CREATOR_DOWNLOAD_URL }}
         run: |
           set -euo pipefail
+          cli="$HOME/cocos_creator/CocosCreator.app/Contents/MacOS/CocosCreator"
+          if [ -x "$cli" ]; then
+            echo "COCOS_CLI=$cli" >> "$GITHUB_ENV"
+            if [ -n "$CREATOR_LICENSE" ]; then
+              mkdir -p "$HOME/Library/Application Support/CocosCreator/licenses"
+              echo "$CREATOR_LICENSE" | base64 -d > "$HOME/Library/Application Support/CocosCreator/licenses/license.json"
+            fi
+            exit 0
+          fi
           url="${CREATOR_DOWNLOAD_URL:-https://download.cocos.com/CocosCreator/v${COCOS_VERSION}/CocosCreator-v${COCOS_VERSION}-mac-121518.zip}"
           installer="$HOME/Library/Caches/cocos-creator/CocosCreator-v${COCOS_VERSION}-mac-121518.zip"
           mkdir -p "$(dirname "$installer")"
@@ -91,7 +122,6 @@ jobs:
           mkdir -p "$HOME/cocos_creator"
           ditto "$creator_app" "$HOME/cocos_creator/CocosCreator.app"
           xattr -dr com.apple.quarantine "$HOME/cocos_creator/CocosCreator.app" || true
-          cli="$HOME/cocos_creator/CocosCreator.app/Contents/MacOS/CocosCreator"
           test -x "$cli"
           echo "COCOS_CLI=$cli" >> "$GITHUB_ENV"
           if [ -n "$CREATOR_LICENSE" ]; then
@@ -100,7 +130,7 @@ jobs:
           fi
       - name: 构建 Android 平台
         run: |
-          "$COCOS_CLI" --project "$GITHUB_WORKSPACE" --build "platform=android;debug=false"
+          "$COCOS_CLI" --project "$GITHUB_WORKSPACE" --build "configPath=$GITHUB_WORKSPACE/ci/android_build_config.json"
       - name: Gradle 打包 APK
         run: |
           if [ -x build/android/proj/gradlew ]; then

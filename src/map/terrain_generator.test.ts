@@ -52,13 +52,16 @@ describe('terrain_generator', () => {
   })
 
   it('classify_terrain 海平面阈值判定', () => {
-    const heights = Float32Array.from([0, 0.41, 0.42, 0.5, 1])
+    const heights = Float32Array.from([0, 0.41, 0.43, 0.5, 1])
     const terrains = classify_terrain(heights, 0.42)
     expect(terrains[0]).toBe(TERRAIN_CODE_OCEAN)
     expect(terrains[1]).toBe(TERRAIN_CODE_OCEAN)
     expect(terrains[2]).toBe(TERRAIN_CODE_PLAIN)
     expect(terrains[3]).toBe(TERRAIN_CODE_PLAIN)
     expect(terrains[4]).toBe(TERRAIN_CODE_PLAIN)
+    const edge = classify_terrain(Float32Array.from([0.5, 0.5]), 0.5)
+    expect(edge[0]).toBe(TERRAIN_CODE_PLAIN)
+    expect(edge[1]).toBe(TERRAIN_CODE_PLAIN)
   })
 
   it('carve_rivers 河流不落海洋', () => {

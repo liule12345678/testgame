@@ -16,7 +16,7 @@ import {
   TERRAIN_CODE_OCEAN,
   TERRAIN_CODE_RIVER
 } from './map_data'
-import { axial_neighbors } from './hex_grid'
+import { axial_neighbors, wrap_q } from './hex_grid'
 import { create_rng } from './rng'
 
 export interface terrain_params {
@@ -61,7 +61,8 @@ export function build_heightmap(
         seed,
         params.noise_octaves,
         params.noise_base_frequency,
-        params.noise_persistence
+        params.noise_persistence,
+        width
       )
       heights[r * width + q] = value
       if (value < min) {
@@ -114,7 +115,7 @@ export function carve_rivers(
 }
 
 function walk_river(map: MapData, start_q: number, start_r: number, max_steps: number): void {
-  let q = start_q
+  let q = wrap_q(start_q, map.width)
   let r = start_r
   for (let step = 0; step < max_steps; step++) {
     const index = cell_index(map, q, r)
@@ -126,7 +127,7 @@ function walk_river(map: MapData, start_q: number, start_r: number, max_steps: n
     if (next === null) {
       return
     }
-    q = next.q
+    q = wrap_q(next.q, map.width)
     r = next.r
   }
 }
@@ -189,7 +190,8 @@ function* build_heightmap_progressive(
         map.seed,
         params.noise_octaves,
         params.noise_base_frequency,
-        params.noise_persistence
+        params.noise_persistence,
+        map.width
       )
       heights[r * map.width + q] = value
       if (value < min) {

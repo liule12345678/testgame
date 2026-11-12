@@ -3,11 +3,11 @@ import {
   AxialCoord,
   PixelCoord,
   TerrainType,
-  axial_to_pixel,
+  sphere_project,
+  sphere_spread,
   chunk_of,
   chunk_cells,
   hex_corners,
-  is_in_bounds,
   terrain_at,
   TERRAIN_PLAIN,
   TERRAIN_OCEAN,
@@ -59,8 +59,8 @@ export class MapView {
     this.transform.scale = next
   }
 
-  world_to_screen(coord: AxialCoord): PixelCoord {
-    const world = axial_to_pixel(coord, HEX_RENDER_SIZE)
+  world_to_screen(coord: AxialCoord, shift: number = 0): PixelCoord {
+    const world = sphere_project(coord.q + shift, coord.r, this.map.width, this.map.height, HEX_RENDER_SIZE)
     return {
       x: world.x * this.transform.scale + this.transform.offset_x,
       y: world.y * this.transform.scale + this.transform.offset_y
@@ -70,25 +70,33 @@ export class MapView {
   render(renderer: HexRenderer, view_width: number, view_height: number): number {
     let drawn = 0
     const visited = new Set<number>()
+    const shifts = [-this.map.width, 0, this.map.width]
+    const map_span = this.map.width * this.map.height
     for (let cr = 0; cr < this.map.chunk_rows; cr++) {
       for (let cq = 0; cq < this.map.chunk_cols; cq++) {
         const cells = chunk_cells({ q: cq, r: cr })
-        if (!chunk_visible(this, cells, view_width, view_height)) {
-          continue
-        }
-        for (const cell of cells) {
-          if (!is_in_bounds(this.map, cell.q, cell.r)) {
+        for (const shift of shifts) {
+          if (!chunk_visible(this, cells, shift, view_width, view_height)) {
             continue
           }
-          const key = cell.r * this.map.width + cell.q
-          if (visited.has(key)) {
-            continue
+          for (const cell of cells) {
+            if (cell.q >= this.map.width || cell.r >= this.map.height) {
+              continue
+            }
+            const key = (shift + this.map.width) * map_span + cell.r * this.map.width + cell.q
+            if (visited.has(key)) {
+              continue
+            }
+            visited.add(key)
+            const center = this.world_to_screen(cell, shift)
+            const spread = sphere_spread(cell.r, this.map.height)
+            const corners = hex_corners(center, HEX_RENDER_SIZE * this.transform.scale).map(corner => ({
+              x: center.x + (corner.x - center.x) * spread,
+              y: corner.y
+            }))
+            renderer.draw_hex(center, corners, TERRAIN_COLORS[terrain_at(this.map, cell.q, cell.r)])
+            drawn++
           }
-          visited.add(key)
-          const center = this.world_to_screen(cell)
-          const corners = hex_corners(center, HEX_RENDER_SIZE * this.transform.scale)
-          renderer.draw_hex(center, corners, TERRAIN_COLORS[terrain_at(this.map, cell.q, cell.r)])
-          drawn++
         }
       }
     }
@@ -96,9 +104,9 @@ export class MapView {
   }
 }
 
-function chunk_visible(view: MapView, cells: AxialCoord[], view_width: number, view_height: number): boolean {
+function chunk_visible(view: MapView, cells: AxialCoord[], shift: number, view_width: number, view_height: number): boolean {
   for (const cell of cells) {
-    const screen = view.world_to_screen(cell)
+    const screen = view.world_to_screen(cell, shift)
     const radius = HEX_RENDER_SIZE * view.get_transform().scale
     if (screen.x + radius >= 0 && screen.x - radius <= view_width && screen.y + radius >= 0 && screen.y - radius <= view_height) {
       return true

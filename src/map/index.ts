@@ -9,6 +9,8 @@ export {
   terrain_at,
   count_terrain,
   terrain_code_to_type,
+  wrap_cell,
+  type wrap_coord,
   TERRAIN_CODE_PLAIN,
   TERRAIN_CODE_OCEAN,
   TERRAIN_CODE_RIVER
@@ -24,7 +26,10 @@ export {
   axial_neighbors,
   chunk_of,
   chunk_cells,
-  hex_corners
+  hex_corners,
+  wrap_q,
+  sphere_project,
+  sphere_spread
 } from './hex_grid'
 export {
   generate_terrain,

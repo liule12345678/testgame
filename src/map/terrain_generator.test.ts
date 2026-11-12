@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   generate_terrain,
+  build_heightmap,
   classify_terrain,
   carve_rivers,
   default_terrain_params,
@@ -14,6 +15,7 @@ import {
   TERRAIN_CODE_OCEAN,
   TERRAIN_CODE_RIVER
 } from './map_data'
+import { fractal_noise } from './noise'
 
 const test_params: terrain_params = {
   ...default_terrain_params(),
@@ -88,5 +90,30 @@ describe('terrain_generator', () => {
     }
     expect(river_count).toBeGreaterThan(0)
     expect(map.terrains.length).toBe(576)
+  })
+
+  it('fractal_noise 横向周期接缝无缝', () => {
+    const width = 16
+    for (const y of [0, 3.5, 7]) {
+      for (const x of [0, 1.25, 5.75, 15.5]) {
+        const before = fractal_noise(x, y, 7, 4, 0.12, 0.5, width)
+        const after = fractal_noise(x + width, y, 7, 4, 0.12, 0.5, width)
+        expect(after).toBeCloseTo(before, 10)
+      }
+    }
+  })
+
+  it('build_heightmap 跨接缝相邻连续', () => {
+    const width = 24
+    const height = 12
+    const heights = build_heightmap(width, height, 7, test_params)
+    let seam_diff = 0
+    let inner_diff = 0
+    for (let r = 0; r < height; r++) {
+      seam_diff += Math.abs(heights[r * width] - heights[r * width + width - 1])
+      inner_diff += Math.abs(heights[r * width + 5] - heights[r * width + 4])
+    }
+    expect(seam_diff / height).toBeLessThan(0.5)
+    expect(inner_diff / height).toBeLessThan(0.5)
   })
 })

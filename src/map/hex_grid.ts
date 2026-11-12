@@ -10,6 +10,24 @@ export interface PixelCoord {
   y: number
 }
 
+export function wrap_q(q: number, width: number): number {
+  return ((q % width) + width) % width
+}
+
+export function sphere_spread(r: number, height: number): number {
+  const lat = (r / (height - 1) - 0.5) * Math.PI
+  return Math.cos(lat)
+}
+
+export function sphere_project(q: number, r: number, width: number, height: number, size: number): PixelCoord {
+  const lat = (r / (height - 1) - 0.5) * Math.PI
+  const spread = Math.cos(lat)
+  const half_span = (Math.sqrt(3) * size * width) / 2
+  const x_plane = Math.sqrt(3) * size * (q + r / 2)
+  const y_span = (1.5 * size * (height - 1)) / Math.PI
+  return { x: (x_plane - half_span) * spread, y: y_span * lat }
+}
+
 export function axial_to_pixel(coord: AxialCoord, size: number): PixelCoord {
   const x = size * Math.sqrt(3) * (coord.q + coord.r / 2)
   const y = size * 1.5 * coord.r

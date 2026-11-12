@@ -3,6 +3,7 @@ import {
   create_map_data,
   cell_index,
   is_in_bounds,
+  wrap_cell,
   terrain_code_to_type,
   TERRAIN_CODE_PLAIN,
   TERRAIN_CODE_OCEAN,
@@ -39,13 +40,28 @@ describe('map_data', () => {
     expect(cell_index(map, 7, 7)).toBe(63)
   })
 
-  it('is_in_bounds 边界判定', () => {
+  it('cell_index 横向环绕寻址', () => {
+    const map = create_map_data(8, 8, 1)
+    expect(cell_index(map, -1, 0)).toBe(7)
+    expect(cell_index(map, 8, 3)).toBe(cell_index(map, 0, 3))
+    expect(cell_index(map, 17, 2)).toBe(cell_index(map, 1, 2))
+  })
+
+  it('wrap_cell 横向取模纵向不变', () => {
+    const map = create_map_data(8, 8, 1)
+    expect(wrap_cell(map, -1, 3)).toEqual({ q: 7, r: 3 })
+    expect(wrap_cell(map, 8, 0)).toEqual({ q: 0, r: 0 })
+    expect(wrap_cell(map, 5, 6)).toEqual({ q: 5, r: 6 })
+  })
+
+  it('is_in_bounds 两极约束 q 环绕恒合法', () => {
     const map = create_map_data(8, 4, 1)
     expect(is_in_bounds(map, 0, 0)).toBe(true)
     expect(is_in_bounds(map, 7, 3)).toBe(true)
-    expect(is_in_bounds(map, -1, 0)).toBe(false)
+    expect(is_in_bounds(map, -1, 0)).toBe(true)
+    expect(is_in_bounds(map, 8, 0)).toBe(true)
+    expect(is_in_bounds(map, 100, 2)).toBe(true)
     expect(is_in_bounds(map, 0, -1)).toBe(false)
-    expect(is_in_bounds(map, 8, 0)).toBe(false)
     expect(is_in_bounds(map, 0, 4)).toBe(false)
   })
 

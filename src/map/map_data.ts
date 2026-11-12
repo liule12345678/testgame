@@ -1,4 +1,5 @@
 import { CHUNK_SIZE } from './constants'
+import { wrap_q } from './hex_grid'
 import { type TerrainType, TERRAIN_PLAIN, TERRAIN_OCEAN, TERRAIN_RIVER } from './terrain_type'
 
 export const TERRAIN_CODE_PLAIN = 0
@@ -35,12 +36,21 @@ export function create_map_data(width: number, height: number, seed: number): Ma
   }
 }
 
+export interface wrap_coord {
+  q: number
+  r: number
+}
+
+export function wrap_cell(map: MapData, q: number, r: number): wrap_coord {
+  return { q: wrap_q(q, map.width), r }
+}
+
 export function cell_index(map: MapData, q: number, r: number): number {
-  return r * map.width + q
+  return r * map.width + wrap_q(q, map.width)
 }
 
 export function is_in_bounds(map: MapData, q: number, r: number): boolean {
-  return q >= 0 && r >= 0 && q < map.width && r < map.height
+  return r >= 0 && r < map.height
 }
 
 export function height_at(map: MapData, q: number, r: number): number {

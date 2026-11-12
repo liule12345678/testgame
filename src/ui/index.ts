@@ -1,24 +1,24 @@
 export { home_module } from "./home/home_module"
-export { home_scene, home_entry, HOME_ENTRIES } from "./home/home_scene"
+export { home_scene, type home_entry, HOME_ENTRIES } from "./home/home_scene"
 export {
   SizeSelectView,
-  SizeOption,
-  ViewSize,
+  type SizeOption,
+  type ViewSize,
   SIZE_OPTIONS,
   SIZE_SELECT_TITLE,
   ProgressView,
   PROGRESS_TITLE,
   MapView,
-  HexRenderer,
-  ViewTransform,
+  type HexRenderer,
+  type ViewTransform,
   TERRAIN_COLORS,
   MIN_SCALE,
   MAX_SCALE,
   HEX_RENDER_SIZE,
   MapScene,
-  MapSceneHandle,
-  SceneContext,
-  ScenePhase,
+  type MapSceneHandle,
+  type SceneContext,
+  type ScenePhase,
   SCENE_KEY,
   SCENE_TITLE,
   create_scene,
@@ -28,12 +28,12 @@ export {
 export { save_manager_module } from "./save/save_manager_module"
 export {
   save_manager_scene,
-  map_scene_target,
+  type map_scene_target,
   MAP_SCENE_FALLBACK_KEY
 } from "./save/save_manager_scene"
 export { save_list_view, SAVE_LIST_EMPTY_TEXT } from "./save/save_list_view"
 export { settings_module } from "./settings/settings_module"
-export { settings_scene, language_option } from "./settings/settings_scene"
+export { settings_scene, type language_option } from "./settings/settings_scene"
 export {
   SETTING_SOUND_VOLUME,
   SETTING_BRIGHTNESS,

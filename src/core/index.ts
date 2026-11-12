@@ -7,16 +7,16 @@ export {
   SCENE_SETTINGS,
   SCENE_MAP_GENERATOR,
   SCENE_SAVE_MANAGER,
-  scene_factory,
-  event_handler,
-  event_bus_contract,
-  scene_registry_contract,
-  settings_contract,
-  game_module,
-  save_terrain_params,
-  save_record,
-  save_input,
-  save_store_contract
+  type scene_factory,
+  type event_handler,
+  type event_bus_contract,
+  type scene_registry_contract,
+  type settings_contract,
+  type game_module,
+  type save_terrain_params,
+  type save_record,
+  type save_input,
+  type save_store_contract
 } from "./contract"
 export { on, emit, clear_events } from "./event_bus"
 export { register_scene, has_scene, list_scenes, create_scene, open_scene } from "./scene_registry"

@@ -8,7 +8,7 @@ import {
 } from './constants'
 import { fractal_noise } from './noise'
 import {
-  MapData,
+  type MapData,
   create_map_data,
   cell_index,
   is_in_bounds,

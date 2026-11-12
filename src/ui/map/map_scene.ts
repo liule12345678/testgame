@@ -1,9 +1,9 @@
-import { MapData, generate_terrain, terrain_params, default_terrain_params } from '../../map'
+import { type MapData, generate_terrain, type terrain_params, default_terrain_params } from '../../map'
 import { save_game, load_game } from '../../core/save_store'
-import { save_record, save_input, SCENE_MAP_GENERATOR } from '../../core/contract'
-import { SizeSelectView, ViewSize } from './size_select_view'
+import { type save_record, type save_input, SCENE_MAP_GENERATOR } from '../../core/contract'
+import { SizeSelectView, type ViewSize } from './size_select_view'
 import { ProgressView } from './progress_view'
-import { MapView, HexRenderer } from './map_view'
+import { MapView, type HexRenderer } from './map_view'
 
 export const SCENE_KEY = SCENE_MAP_GENERATOR
 export const SCENE_TITLE = '地图'

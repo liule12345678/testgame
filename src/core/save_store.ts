@@ -3,9 +3,9 @@ import { emit } from "./event_bus"
 import {
   EVENT_SAVE_DELETED,
   EVENT_SAVE_SAVED,
-  save_input,
-  save_record,
-  save_store_contract
+  type save_input,
+  type save_record,
+  type save_store_contract
 } from "./contract"
 
 const SAVE_KEY = "saves.json"

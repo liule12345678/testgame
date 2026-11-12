@@ -1,5 +1,5 @@
 import { CHUNK_SIZE } from './constants'
-import { TerrainType, TERRAIN_PLAIN, TERRAIN_OCEAN, TERRAIN_RIVER } from './terrain_type'
+import { type TerrainType, TERRAIN_PLAIN, TERRAIN_OCEAN, TERRAIN_RIVER } from './terrain_type'
 
 export const TERRAIN_CODE_PLAIN = 0
 export const TERRAIN_CODE_OCEAN = 1

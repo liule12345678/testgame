@@ -1,7 +1,7 @@
 export { CHUNK_SIZE, MAP_WIDTH, MAP_HEIGHT, SEA_LEVEL, MIN_ZOOM, MAX_ZOOM } from './constants'
-export { TerrainType, TERRAIN_PLAIN, TERRAIN_OCEAN, TERRAIN_RIVER } from './terrain_type'
+export { type TerrainType, TERRAIN_PLAIN, TERRAIN_OCEAN, TERRAIN_RIVER } from './terrain_type'
 export {
-  MapData,
+  type MapData,
   create_map_data,
   cell_index,
   is_in_bounds,
@@ -14,8 +14,8 @@ export {
   TERRAIN_CODE_RIVER
 } from './map_data'
 export {
-  AxialCoord,
-  PixelCoord,
+  type AxialCoord,
+  type PixelCoord,
   HEX_CHUNK_SIZE,
   axial_to_pixel,
   pixel_to_axial,
@@ -31,7 +31,7 @@ export {
   build_heightmap,
   classify_terrain,
   carve_rivers,
-  terrain_params,
+  type terrain_params,
   default_terrain_params,
   PROGRESS_HEIGHTMAP_END,
   PROGRESS_CLASSIFY_END,

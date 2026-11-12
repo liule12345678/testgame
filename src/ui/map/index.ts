@@ -1,9 +1,9 @@
-export { SizeSelectView, SizeOption, ViewSize, SIZE_OPTIONS, SIZE_SELECT_TITLE } from './size_select_view'
+export { SizeSelectView, type SizeOption, type ViewSize, SIZE_OPTIONS, SIZE_SELECT_TITLE } from './size_select_view'
 export { ProgressView, PROGRESS_TITLE } from './progress_view'
 export {
   MapView,
-  HexRenderer,
-  ViewTransform,
+  type HexRenderer,
+  type ViewTransform,
   TERRAIN_COLORS,
   MIN_SCALE,
   MAX_SCALE,
@@ -11,9 +11,9 @@ export {
 } from './map_view'
 export {
   MapScene,
-  MapSceneHandle,
-  SceneContext,
-  ScenePhase,
+  type MapSceneHandle,
+  type SceneContext,
+  type ScenePhase,
   SCENE_KEY,
   SCENE_TITLE,
   create_scene,
